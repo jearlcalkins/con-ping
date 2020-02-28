@@ -1,38 +1,53 @@
+import argparse
+import sys
 import ipaddress
 from scapy.all import *
 from subprocess import Popen
 import datetime
 
-
+def fixstr(astr):
+    if astr.startswith("0x"):
+        aint = int(astr,16)
+    else:
+        aint = int(astr,10)
+    return aint
+      
 def do_a_ping(da_host):
     send(IP(dst=da_host)/ICMP(), verbose=False)
 
-def ping_starting_here(ip_blockstart, ping_block_size):
-    xx = range(ping_block_size)
+def ping_starting_here(ipblockstart, ipblocksize):
+    global allhosts
+
+    xx = range(ipblocksize)
     for x in xx:
-        mine = str(ipaddress.IPv4Address(ip_blockstart) + x)
+        mine = str(ipaddress.IPv4Address(ipblockstart) + x)
         if x == 0:
             first_ip = mine
         allhosts[mine] = Ahost(mine)
         do_a_ping(mine)
     last_ip = mine
+
     return (first_ip, last_ip)
 
 class Ahost():
     def __init__(self, ip):
         self.ip = ip
-        self.respondtime = float(0)
-        self.senttime = float(0) 
-        self.delta = float(0) 
+        self.respondtime = Decimal('0.000000')
+        self.senttime = Decimal('0.000000') 
+        self.delta = Decimal('0.000000') 
+        self.reply = False
 
     def add_ping_results(self, respondtime):
         self.respondtime = respondtime
         self.delta = self.respondtime - self.senttime
+        self.reply = True
 
     def add_ping_starts(self, senttime):
         self.senttime = senttime
 
 def ana_pcap(fn_pcap, first_ip, last_ip):
+    global allhosts
+
     a = rdpcap(fn_pcap)
     sent_ct = 0
     rx_ct = 0
@@ -49,12 +64,12 @@ def ana_pcap(fn_pcap, first_ip, last_ip):
                 hostdstip = pkt[IP].dst
                 serversrcip = pkt[IP].src
                 senttime = pkt.time
+                #print(type(pkt.time), dir(pkt.time))
                 allhosts[hostdstip].add_ping_starts(senttime)
                 if first_ping == False:
                     begin_send = float(senttime)
                     first_ping = True 
                 
-                #print(sent_ct, "*ping start time object version:", allhosts[hostdstip].senttime)
             if pkt[ICMP].type == 0:
                 rx_ct += 1
                 hostdstip = pkt[IP].src
@@ -62,10 +77,6 @@ def ana_pcap(fn_pcap, first_ip, last_ip):
                 respondtime = pkt.time
                 if hostdstip in allhosts.keys():
                     allhosts[hostdstip].add_ping_results(respondtime)
-                    #print(rx_ct, "** ", hostdstip, allhosts[hostdstip].senttime, allhosts[hostdstip].respondtime)
-                    #print("now the ping_time", allhosts[hostdstip].ping_time() )
-                    a_str = hostdstip + "," + str(allhosts[hostdstip].delta) + "\n"
-                    log.write(a_str)
                 else:
                     slow_ct += 1
 
@@ -80,39 +91,71 @@ def ana_pcap(fn_pcap, first_ip, last_ip):
 #       'unreachable'                3
 #       'time exceeded in-transit'  11 
 
-starbucksip = '4.34.46.0'
-starbucksip = '4.34.0.0'
-chartersip = '142.254.0.0'
+def doit(ipblockstart, iterations, ipblocksize, fname):
 
-ip_blockstart = chartersip 
-ping_block_size = 0x100
-log = open('log_hammer.txt', 'w')
-total_pings_sent = 0
-total_pings_responded = 0
+    global allhosts
 
-xx = range(0x100)
-for x in xx:
-    allhosts = {}
-    print(datetime.datetime.now())
-    p = Popen(['tcpdump', '-i', 'eth0', '-U', '-n', 'icmp', '-w', 'cap.pcap'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-    (first_ip, last_ip) = ping_starting_here(ip_blockstart, ping_block_size)
-    print("first last IPs in block:", first_ip, last_ip, "total of:", len(allhosts))
-    time.sleep(1)
-    p.terminate()
-    dumpoutput, dumperrors = p.communicate()
-    dumpoutput = dumpoutput.replace('\n',' ')
-    dumperrors = dumperrors.replace('\n',' ')
-    print("tcpdump results: errors:", dumperrors, "output:", dumpoutput)
-    (begin_send, end_send, sent_ct, rx_ct, slow_ct)  = ana_pcap("cap.pcap", first_ip, last_ip)
-    total_pings_sent += sent_ct
-    total_pings_responded += rx_ct
-    print("ping response & ratio", rx_ct, sent_ct, str(rx_ct / sent_ct), "too slow: ", slow_ct, end='')
-    delta_send_time = end_send - begin_send
-    print(" time to build-send the block", str(delta_send_time))
-    print("")
+    pcapname = fname + ".pcap"
+    total_pings_sent = 0
+    total_pings_responded = 0
 
-    ip_blockstart = str(ipaddress.IPv4Address(ip_blockstart) + ping_block_size )
+    xx = range(iterations)
+    for x in xx:
+        allhosts = {}
+        strtime = datetime.datetime.now()
+        p = Popen(['tcpdump', '-i', 'eth0', '-U', '-n', 'icmp', '-w', pcapname], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        (first_ip, last_ip) = ping_starting_here(ipblockstart, ipblocksize)
+        print("IPblock:", first_ip, last_ip, len(allhosts), "IPs")
+        time.sleep(1)
+        p.terminate()
+        dumpoutput, dumperrors = p.communicate()
+        dumpoutput = dumpoutput.replace('\n',' ')
+        dumperrors = dumperrors.replace('\n',' ')
+        #print("tcpdump results: errors:", dumperrors, "output:", dumpoutput)
+        (begin_send, end_send, sent_ct, rx_ct, slow_ct)  = ana_pcap(pcapname, first_ip, last_ip)
+        total_pings_sent += sent_ct
+        total_pings_responded += rx_ct
+        print("ping response & ratio", rx_ct, sent_ct, str(rx_ct / sent_ct), end='')
+        delta_send_time = end_send - begin_send
+        print(" send:", delta_send_time, end='')
+        print(" block time:", datetime.datetime.now() - strtime)
+        print("")
 
-print("pings sent: ", total_pings_sent, " pings received: ", total_pings_responded, "ratio: ", str(total_pings_responded / total_pings_sent))
+        ipblockstart = str(ipaddress.IPv4Address(ipblockstart) + ipblocksize )
 
+    block_list = allhosts.keys()
+    for x in block_list:
+        if allhosts[x].reply == False:
+            astr = x + "," + "unreachable\n"
+        else:
+            astr = x + "," + str(allhosts[x].delta) + "\n"
+        log.write(astr)
+  
+    print("total pings sent: ", total_pings_sent, " pings received: ", total_pings_responded, "ratio: ", str(total_pings_responded / total_pings_sent))
+
+def get_pass_variables():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("ipblockstart", help="IPv4 start e.g. 192.168.0.0", type=str)
+    parser.add_argument("ipblocksize", help="block size", type=str)
+    parser.add_argument("iterations", help="block iterations", type=str)
+    args = parser.parse_args()
+    ipblocksize = fixstr(args.ipblocksize)
+    iterations = fixstr(args.iterations)
+    ipblockstart = args.ipblockstart
+    totalipct = ipblocksize * iterations - 1
+    ipblockend  = str(ipaddress.IPv4Address(ipblockstart) + totalipct)
+    fname = ipblockstart.replace(".","") + "-" + ipblockend.replace(".", "") 
+    print(fname, str(ipblocksize), str(iterations), "ip range:", ipblockstart, "-", str(ipaddress.IPv4Address(ipblockstart) + totalipct))
+    return (ipblockstart, iterations, ipblocksize, fname)
+# sys.exit('early temp exit')
+
+t0 = datetime.datetime.now()
+(ipblockstart, iterations, ipblocksize, fname) = get_pass_variables()
+logname = fname + ".txt"
+log = open(logname, 'w')
+allhosts = {}
+doit(ipblockstart, iterations, ipblocksize, fname)
 log.close()
+t1 = datetime.datetime.now()
+print("complete .... delta total time", t1 - t0)
