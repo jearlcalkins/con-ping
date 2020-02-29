@@ -20,12 +20,19 @@ The tcpdump utility, running as sudo or root, captures a sequence of ICMP 'echo 
 bigping.py utility, currently gives tcpdump 1 second to capture the ICMP 'echo responses' come-back from responding hosts.
 The tcpdump utility is stopped, and the tcpdump's pcap file is analyzed for packets sent and packets received, noting how-long it takes for each responding host to reply.
 If a host does not replay within the 1 second listening period, no time in the log indicates no response.
+
+
 If one is pinging hosts 12 timezones away, there is a speed of light latency factor for a 20 million meter, down and back delay of 13ms.
 This ignores the refractive index of glass. After throwing in all the router bloat, between here and there, there is an arguement for listening for ping responses, for more than 1 second.
-On the otherhand, the 1 second listen time, when pinging a block of 128 IP hosts is a large factor.  Especially when there is a need to ping a /16 , 64,536 unique IPs.  
-Another consideration is; how many pings you burst at once.  The ICMP 'echo request' packets are small, but they have to be carried to their destination and the host NIC has to respond with an 'echo'.  That is, if the host is even configured to provide a ping response.  At some point, and ISP may not tolerate your ping bursts and they may block you.  I ping blocks of 256 hosts, as a burst.  I don't know at what level, network admins, will intervene and block your pings.
-Another 
+On the otherhand, the 1 second listen time, when pinging a block of 128 IP hosts is a large factor.
+Especially when there is a need to ping a /16 , 64,536 unique IPs.  
 
+
+Another consideration is; how many pings you burst at once.  The ICMP 'echo request' packets are small, but they have to be carried to their destination and the host NIC has to respond with an 'echo'.
+That is, if the host is even configured to provide a ping response.
+At some point, an ISP may not tolerate your ping bursts and they may block you.
+I ping blocks of 256 hosts, as a burst.
+In some situations, I'm pinging an entire /16 and that effort alone, may irritate a network admin. I don't know at what level, network admins, will intervene and block your pings.
 
 ##### running the application
 
