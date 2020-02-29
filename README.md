@@ -10,7 +10,8 @@ ethernet interface: eth0 (you may want to change this hardcoded variable to wlan
 ###### a test of tcpdump
 You should be able to execute the following tcpdump command as root or sudo, or the application will not work:
 
-```tcpdump -i eth0 -U -n icmp -w myfav.pcap
+```
+tcpdump -i eth0 -U -n icmp -w myfav.pcap
 ```
     
 ###### recovering ping result times via tcpdump
