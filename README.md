@@ -2,12 +2,12 @@
 concurrent ping (icmp) for large ranges of hosts
 
 ##### run environment:
-AWS AMI linux on t2.micro
-tcpdump installed
-sudo or root access
-python 3.6 with these modules: argparse, sys, ipaddress, datetime, subprocess and scapy
-ethernet interface: eth0 
-other linux or bsd unix's may use a different interface name. if so, the hardcoded tcpdump call, will need to be changed.
+AWS AMI linux on t2.micro  
+tcpdump installed  
+sudo or root access  
+python 3.6 with these modules: argparse, sys, ipaddress, datetime, subprocess and scapy  
+ethernet interface: eth0  
+other linux or bsd unix's may use a different interface name. if so, the hardcoded tcpdump call, will need to be changed.  
 
 ##### rough install directions #####
 be careful with python3 environment, and a good corresponding pip3 install.  
