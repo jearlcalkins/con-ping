@@ -2,14 +2,32 @@
 concurrent ping (icmp) for large ranges of hosts
 
 ##### run environment:
-linux with tcpdump
-must have sudo or root access
-python 3 with these modules: argparse, sys, ipaddress, datetime, subprocess and scapy
-ethernet interface: eth0 You may want to change this hardcoded variable to wlan0, if pinging from your starbucks wifi.  other linux or bsd unix's may use a different interface name.  if so, the hardcoded tcpdump call, will need to be changed.
+AWS AMI linux on t2.micro
+tcpdump installed
+sudo or root access
+python 3.6 with these modules: argparse, sys, ipaddress, datetime, subprocess and scapy
+ethernet interface: eth0 
+other linux or bsd unix's may use a different interface name. if so, the hardcoded tcpdump call, will need to be changed.
 
-##### change to this code:
+##### rough install directions #####
+be careful with python3 environment, and a good corresponding pip3 install.  
+```
+sudo yum update -y
+sudo yum upgrade -y
+sudo yum install python36 -y
+sudo yum install tcpdump -y
+curl -O https://bootstrap.pypa.io/get-pip.py
+python3 get-pip.py --user
+
+pip install numpy
+pip install pandas
+pip install scapy
+pip install matplotlib
+pip install ipaddress
+```
+
+##### needed updates to this code???:
 1) change the #! line, the first line of bigping.py, to use your server's python location.
-2) validate your hardware's interface NIC is 'eth0'.  if NOT, find the code, where the application calls tcpdump and change
 
 ##### a test of tcpdump
 You should be able to execute the following tcpdump command as root or sudo, or the application will not work:
@@ -44,15 +62,13 @@ An example:
 1. The first IP block starts at 192.168.0.0
 2. A cidr number e.g. 24 will ping 256 IPs, starting with the above IP block
 
-These variables will ping the entire 192.168.0.0/24 network
-
 ```
 python bigping.py 192.168.0.1 24
 ```
 
-Because of the ping 0x80 blocksize, the application will start with 192.168.0.0 base address and ping two blocks; the application will ping 192.168.0.0 thru 192.168.0.255
+Because of the hardcoded 0x80 (128) blocksize, the application will start with 192.168.0.0 base address and ping two blocks; the application will ping 192.168.0.0 thru 192.168.0.255
 
-The results will leave you a logfile with the name 192.168.0.0-24-1590597359.txt
+The application results will leave you a logfile with the name 192.168.0.0-24-1590597359.txt
 This results snippet is a ping results from another base IP address:
 ```
 ...
